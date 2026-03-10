@@ -4,7 +4,10 @@ go 1.25.7
 
 require github.com/mark3labs/mcp-go v0.45.0
 
+require github.com/joho/godotenv v1.5.1
+
 require (
+	github.com/AIOZNetwork/aioz-stream-go-client v1.0.14
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect

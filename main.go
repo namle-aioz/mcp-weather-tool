@@ -26,7 +26,18 @@ func main() {
 		),
 	)
 
+	aiozStream := mcp.NewTool(
+		"count-total-media",
+		mcp.WithDescription("Get total number of videos and audios in AIOZ Stream account"),
+		mcp.WithString(
+			"location",
+			mcp.Description("City name or location"),
+			mcp.Required(),
+		),
+	)
+
 	mcpServer.AddTool(weatherTool, handleWeather)
+	mcpServer.AddTool(aiozStream, handleAiozStream)
 
 	sseServer := server.NewSSEServer(mcpServer)
 	log.Printf("Starting SSE server on localhost:8087")
@@ -69,4 +80,22 @@ func handleWeather(
 
 	return mcp.NewToolResultText(result), nil
 
+}
+func handleAiozStream(
+	ctx context.Context,
+	req mcp.CallToolRequest,
+) (*mcp.CallToolResult, error) {
+
+	videoCount, audioCount, err := countVideoAndAudio(ctx)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	result := fmt.Sprintf(
+		"AIOZ Stream Account Stats:\nVideos: %d\nAudios: %d",
+		videoCount,
+		audioCount,
+	)
+
+	return mcp.NewToolResultText(result), nil
 }
