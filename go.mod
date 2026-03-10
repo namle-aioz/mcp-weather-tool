@@ -4,7 +4,6 @@ go 1.25.7
 
 require github.com/mark3labs/mcp-go v0.45.0
 
-require github.com/joho/godotenv v1.5.1
 
 require (
 	github.com/AIOZNetwork/aioz-stream-go-client v1.0.14

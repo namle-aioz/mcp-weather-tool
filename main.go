@@ -1,9 +1,8 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"log"
+	"mcp-weather-server/handler"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -30,14 +29,60 @@ func main() {
 		"count-total-media",
 		mcp.WithDescription("Get total number of videos and audios in AIOZ Stream account"),
 		mcp.WithString(
-			"location",
-			mcp.Description("City name or location"),
+			"publicKey",
+			mcp.Description("Public key to authorization"),
+			mcp.Required(),
+		), mcp.WithString(
+			"secretKey",
+			mcp.Description("Secret key to authorization"),
 			mcp.Required(),
 		),
 	)
 
-	mcpServer.AddTool(weatherTool, handleWeather)
-	mcpServer.AddTool(aiozStream, handleAiozStream)
+	aiozStreamGetVideoDetail := mcp.NewTool(
+		"get-video-url",
+		mcp.WithDescription("Get all video URL from the user's AIOZ Stream account by video name"),
+		mcp.WithString(
+			"publicKey",
+			mcp.Description("Public key to authorization"),
+			mcp.Required(),
+		), mcp.WithString(
+			"secretKey",
+			mcp.Description("Secret key to authorization"),
+			mcp.Required(),
+		), mcp.WithString(
+			"videoName",
+			mcp.Description("Name of video"),
+			mcp.Required(),
+		),
+	)
+
+	aiozStreamUploadVideo := mcp.NewTool(
+		"upload-video",
+		mcp.WithDescription("Upload a video file from the user's local machine to their AIOZ Stream account using the provided file path "),
+		mcp.WithString(
+			"publicKey",
+			mcp.Description("Public key to authorization"),
+			mcp.Required(),
+		), mcp.WithString(
+			"secretKey",
+			mcp.Description("Secret key to authorization"),
+			mcp.Required(),
+		), mcp.WithString(
+			"filePath",
+			mcp.Description("Path of this file in local machine"),
+			mcp.Required(),
+		), mcp.WithString(
+			"title",
+			mcp.Description("Title of the video to upload"),
+			mcp.Required(),
+		),
+	)
+
+	mcpServer.AddTool(weatherTool, handler.HandleWeather)
+	mcpServer.AddTool(aiozStream, handler.HandleCountAiozStream)
+	mcpServer.AddTool(aiozStreamGetVideoDetail, handler.HandleAiozStreamGetVideo)
+	mcpServer.AddTool(aiozStreamUploadVideo, handler.HandleUploadVideo)
 
 	sseServer := server.NewSSEServer(mcpServer)
 	log.Printf("Starting SSE server on localhost:8087")
@@ -45,57 +90,4 @@ func main() {
 	if err := sseServer.Start(":8087"); err != nil {
 		log.Fatalf("Server error: %v", err)
 	}
-}
-
-func handleWeather(
-	ctx context.Context,
-	req mcp.CallToolRequest,
-) (*mcp.CallToolResult, error) {
-
-	args, ok := req.Params.Arguments.(map[string]any)
-	if !ok {
-		return mcp.NewToolResultError("invalid arguments"), nil
-	}
-	location, ok := args["location"].(string)
-	if !ok {
-		return mcp.NewToolResultError("location parameter required"), nil
-	}
-
-	lat, lon, err := geocode(location)
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
-	weather, err := getWeather(lat, lon)
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
-	result := fmt.Sprintf(
-		"Weather in %s:\nTemperature: %.1f°C\nWind Speed: %.1f km/h",
-		location,
-		weather.CurrentWeather.Temperature,
-		weather.CurrentWeather.WindSpeed,
-	)
-
-	return mcp.NewToolResultText(result), nil
-
-}
-func handleAiozStream(
-	ctx context.Context,
-	req mcp.CallToolRequest,
-) (*mcp.CallToolResult, error) {
-
-	videoCount, audioCount, err := countVideoAndAudio(ctx)
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
-	result := fmt.Sprintf(
-		"AIOZ Stream Account Stats:\nVideos: %d\nAudios: %d",
-		videoCount,
-		audioCount,
-	)
-
-	return mcp.NewToolResultText(result), nil
 }

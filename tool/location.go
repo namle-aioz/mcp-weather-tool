@@ -1,4 +1,4 @@
-package main
+package tool
 
 import (
 	"encoding/json"
@@ -15,7 +15,7 @@ type GeoResponse struct {
 	} `json:"results"`
 }
 
-func geocode(location string) (float64, float64, error) {
+func Geocode(location string) (float64, float64, error) {
 
 	u := fmt.Sprintf(
 		"https://geocoding-api.open-meteo.com/v1/search?name=%s&count=1",

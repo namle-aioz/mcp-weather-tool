@@ -1,4 +1,4 @@
-package main
+package tool
 
 import (
 	"encoding/json"
@@ -14,7 +14,7 @@ type WeatherResponse struct {
 	} `json:"current_weather"`
 }
 
-func getWeather(lat, lon float64) (*WeatherResponse, error) {
+func GetWeather(lat, lon float64) (*WeatherResponse, error) {
 
 	url := fmt.Sprintf(
 		"https://api.open-meteo.com/v1/forecast?latitude=%f&longitude=%f&current_weather=true",
