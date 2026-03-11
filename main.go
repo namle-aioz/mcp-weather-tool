@@ -3,15 +3,31 @@ package main
 import (
 	"log"
 	"mcp-weather-server/handler"
+	"net/http"
+	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("No .env file found")
+	}
+	port := os.Getenv("SERVER_PORT")
+	if port == "" {
+		port = "8087"
+	}
 
+	mux := http.NewServeMux()
+	mux.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("pong"))
+	})
+	mux.HandleFunc("/upload", handler.UploadHandler)
 	mcpServer := server.NewMCPServer(
-		"weather-server",
+		"aioz-mcp",
 		"1.0.0",
 	)
 
@@ -25,56 +41,52 @@ func main() {
 		),
 	)
 
-	aiozStream := mcp.NewTool(
+	aiozStream := newAIOZTool(
 		"count-total-media",
-		mcp.WithDescription("Get total number of videos and audios in AIOZ Stream account"),
-		mcp.WithString(
-			"publicKey",
-			mcp.Description("Public key to authorization"),
-			mcp.Required(),
-		), mcp.WithString(
-			"secretKey",
-			mcp.Description("Secret key to authorization"),
-			mcp.Required(),
-		),
+		true,
+		"Get total number of videos and audios in AIOZ Stream account",
 	)
 
-	aiozStreamGetVideoDetail := mcp.NewTool(
+	aiozStreamGetVideoDetail := newAIOZTool(
 		"get-video-url",
-		mcp.WithDescription("Get all video URL from the user's AIOZ Stream account by video name"),
+		true,
+		"Get all video URL from the user's AIOZ Stream account by video name",
 		mcp.WithString(
-			"publicKey",
-			mcp.Description("Public key to authorization"),
-			mcp.Required(),
-		), mcp.WithString(
-			"secretKey",
-			mcp.Description("Secret key to authorization"),
-			mcp.Required(),
-		), mcp.WithString(
 			"videoName",
 			mcp.Description("Name of video"),
 			mcp.Required(),
 		),
 	)
 
-	aiozStreamUploadVideo := mcp.NewTool(
+	aiozStreamGetListVideo := newAIOZTool(
+		"get-list-video",
+		true,
+		"Get all video from the user's AIOZ Stream account",
+	)
+
+	aiozStreamUploadVideo := newAIOZTool(
 		"upload-video",
-		mcp.WithDescription("Upload a video file from the user's local machine to their AIOZ Stream account using the provided file path "),
+		true,
+		"Upload a video file from the user's local machine to their AIOZ Stream account",
 		mcp.WithString(
-			"publicKey",
-			mcp.Description("Public key to authorization"),
-			mcp.Required(),
-		), mcp.WithString(
-			"secretKey",
-			mcp.Description("Secret key to authorization"),
-			mcp.Required(),
-		), mcp.WithString(
 			"filePath",
 			mcp.Description("Path of this file in local machine"),
 			mcp.Required(),
-		), mcp.WithString(
+		),
+		mcp.WithString(
 			"title",
 			mcp.Description("Title of the video to upload"),
+			mcp.Required(),
+		),
+	)
+
+	aiozStreamUCreateKeyLiveStream := newAIOZTool(
+		"create-key-live",
+		true,
+		"Create a key live stream to AIOZ Stream account",
+		mcp.WithString(
+			"nameKey",
+			mcp.Description("Name of key live stream"),
 			mcp.Required(),
 		),
 	)
@@ -83,11 +95,37 @@ func main() {
 	mcpServer.AddTool(aiozStream, handler.HandleCountAiozStream)
 	mcpServer.AddTool(aiozStreamGetVideoDetail, handler.HandleAiozStreamGetVideo)
 	mcpServer.AddTool(aiozStreamUploadVideo, handler.HandleUploadVideo)
+	mcpServer.AddTool(aiozStreamGetListVideo, handler.HandleAiozStreamGetListVideo)
+	mcpServer.AddTool(aiozStreamUCreateKeyLiveStream, handler.HandleCreateLiveStreamKey)
 
 	sseServer := server.NewSSEServer(mcpServer)
-	log.Printf("Starting SSE server on localhost:8087")
+	mux.Handle("/", sseServer)
+	log.Printf("Starting SSE server on port %s", port)
 
-	if err := sseServer.Start(":8087"); err != nil {
-		log.Fatalf("Server error: %v", err)
+	http.ListenAndServe(":"+port, mux)
+}
+
+func newAIOZTool(name string, auth bool, description string, params ...mcp.ToolOption) mcp.Tool {
+	baseParams := []mcp.ToolOption{
+		mcp.WithDescription(description),
 	}
+
+	if auth {
+		baseParams = append(baseParams,
+			mcp.WithString(
+				"publicKey",
+				mcp.Description("Public key to authorization"),
+				mcp.Required(),
+			),
+			mcp.WithString(
+				"secretKey",
+				mcp.Description("Secret key to authorization"),
+				mcp.Required(),
+			),
+		)
+	}
+
+	baseParams = append(baseParams, params...)
+
+	return mcp.NewTool(name, baseParams...)
 }

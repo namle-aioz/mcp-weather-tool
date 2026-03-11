@@ -73,6 +73,52 @@ func GetVideoDetailByName(ctx context.Context, publicKey string, secretKey strin
 	return sourceURLs, nil
 }
 
+func GetVideos(ctx context.Context, publicKey string, secretKey string) (interface{}, error) {
+	client := createClient(publicKey, secretKey)
+	videoReq := aiozstreamsdk.NewGetMediaListRequest()
+	videoReq.SetType("video")
+
+	videoRes, err := client.Media.GetMediaListWithContext(ctx, *videoReq)
+	if err != nil {
+		return nil, err
+	}
+
+	sourceURLs := make(map[string]string)
+	var mediaList []model.MediaInfo
+	media := videoRes.GetData().Media
+	if media == nil {
+		return sourceURLs, nil
+	}
+
+	for _, m := range *media {
+		item := model.MediaInfo{}
+
+		if m.Id != nil {
+			item.MediaID = *m.Id
+		}
+
+		if m.Title != nil {
+			item.Name = *m.Title
+		}
+
+		if m.Size != nil {
+			item.Size = *(m.Size)
+		}
+
+		if m.Duration != nil {
+			item.Duration = *(m.Duration)
+		}
+
+		if m.CreatedAt != nil {
+			item.CreatedAt = *m.CreatedAt
+		}
+
+		mediaList = append(mediaList, item)
+	}
+
+	return mediaList, nil
+}
+
 func UploadVideo(ctx context.Context, publicKey string, secretKey string, data *model.UploadVideoClient, title string) error {
 	client := createClient(publicKey, secretKey)
 	mediaReq := aiozstreamsdk.NewCreateMediaRequest()
@@ -97,5 +143,22 @@ func UploadVideo(ctx context.Context, publicKey string, secretKey string, data *
 		return errUpload
 	}
 
+	return nil
+}
+
+func CreateKeyLiveStream(ctx context.Context, publicKey string, secretKey string, name string) error {
+	client := createClient(publicKey, secretKey)
+	typePayload := "video"
+	savepayload := true
+
+	payload := aiozstreamsdk.CreateLiveStreamKeyRequest{
+		Name: &name,
+		Type: &typePayload,
+		Save: &savepayload,
+	}
+	_, err := client.LiveStream.CreateLiveStreamKeyWithContext(ctx, payload)
+	if err != nil {
+		return err
+	}
 	return nil
 }

@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"mcp-weather-server/model"
 	"mcp-weather-server/tool"
-	"os"
-	"path/filepath"
+	"net/http"
 
 	"github.com/mark3labs/mcp-go/mcp"
 )
@@ -77,6 +76,37 @@ func HandleAiozStreamGetVideo(
 	return mcp.NewToolResultText(result), nil
 }
 
+func HandleAiozStreamGetListVideo(
+	ctx context.Context,
+	req mcp.CallToolRequest,
+) (*mcp.CallToolResult, error) {
+
+	args, ok := req.Params.Arguments.(map[string]any)
+	if !ok {
+		return mcp.NewToolResultError("invalid arguments"), nil
+	}
+	publicKey, ok := args["publicKey"].(string)
+	if !ok {
+		return mcp.NewToolResultError("PublicKey parameter required"), nil
+	}
+	secretKey, ok := args["secretKey"].(string)
+	if !ok {
+		return mcp.NewToolResultError("SecretKey parameter required"), nil
+	}
+
+	videos, err := tool.GetVideos(ctx, publicKey, secretKey)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	result := fmt.Sprintf(
+		"Video List: %s",
+		videos,
+	)
+
+	return mcp.NewToolResultText(result), nil
+}
+
 func HandleUploadVideo(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 
 	args, ok := req.Params.Arguments.(map[string]any)
@@ -84,10 +114,6 @@ func HandleUploadVideo(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 		return mcp.NewToolResultError("invalid arguments"), nil
 	}
 	fmt.Println(args)
-	filePath, ok := args["filePath"].(string)
-	if !ok {
-		return mcp.NewToolResultError("FilePath parameter required"), nil
-	}
 	videoName, ok := args["title"].(string)
 	if !ok {
 		return mcp.NewToolResultError("title parameter required"), nil
@@ -101,19 +127,46 @@ func HandleUploadVideo(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 		return mcp.NewToolResultError("SecretKey parameter required"), nil
 	}
 
-	file, err := os.Open(filePath)
+	uploadURL := "http://localhost:8087/upload"
+
+	result := fmt.Sprintf(
+		"Upload the video using this endpoint:\nPOST %s\nForm fields: file, title=%s, publicKey=%s, secretKey=%s",
+		uploadURL,
+		videoName,
+		publicKey,
+		secretKey,
+	)
+
+	return mcp.NewToolResultText(result), nil
+}
+
+func UploadHandler(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	err := r.ParseMultipartForm(32 << 20)
 	if err != nil {
-		return nil, err
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
 	}
 	defer file.Close()
 
-	stat, err := file.Stat()
-	if err != nil {
-		return nil, err
+	title := r.FormValue("title")
+	publicKey := r.FormValue("publicKey")
+	secretKey := r.FormValue("secretKey")
+	if title == "" || publicKey == "" || secretKey == "" {
+		http.Error(w, "title, publicKey, secretKey are required", http.StatusBadRequest)
+		return
 	}
 
-	fileSize := stat.Size()
-	fileName := filepath.Base(filePath)
+	fileName := header.Filename
+	fileSize := header.Size
 
 	var clientUploadVideo = &model.UploadVideoClient{
 		FileName: fileName,
@@ -121,14 +174,42 @@ func HandleUploadVideo(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 		File:     file,
 	}
 
-	errUpload := tool.UploadVideo(ctx, publicKey, secretKey, clientUploadVideo, videoName)
-	if errUpload != nil {
-		return mcp.NewToolResultError(errUpload.Error()), nil
+	err = tool.UploadVideo(ctx, publicKey, secretKey, clientUploadVideo, title)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	w.Write([]byte("upload success"))
+}
+
+func HandleCreateLiveStreamKey(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+
+	args, ok := req.Params.Arguments.(map[string]any)
+	if !ok {
+		return mcp.NewToolResultError("invalid arguments"), nil
+	}
+	nameKey, ok := args["nameKey"].(string)
+	if !ok {
+		return mcp.NewToolResultError("Name Key parameter required"), nil
+	}
+	publicKey, ok := args["publicKey"].(string)
+	if !ok {
+		return mcp.NewToolResultError("PublicKey parameter required"), nil
+	}
+	secretKey, ok := args["secretKey"].(string)
+	if !ok {
+		return mcp.NewToolResultError("SecretKey parameter required"), nil
+	}
+
+	err := tool.CreateKeyLiveStream(ctx, publicKey, secretKey, nameKey)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
 	}
 
 	result := fmt.Sprintf(
-		"Video '%s' uploaded successfully to AIOZ Stream",
-		fileName,
+		"Key created successfully to AIOZ Stream with name: %+v",
+		nameKey,
 	)
 
 	return mcp.NewToolResultText(result), nil

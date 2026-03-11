@@ -1,0 +1,9 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    container_name: go-app
+    ports:
+      - "8088:${PORT}"
+    restart: unless-stopped
