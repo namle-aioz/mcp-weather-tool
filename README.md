@@ -71,8 +71,6 @@ Search for a video by name and retrieve all its playback and asset URLs.
 }
 ```
 
-> **Note:** If multiple videos match the search term, only the last matching video's URLs are returned.
-
 ---
 
 ### `get-list-video`
