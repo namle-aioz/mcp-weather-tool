@@ -7,7 +7,6 @@ A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server writte
 ## Features
 
 - **Weather Lookup**: Get current temperature and wind speed for any city worldwide.
-- **AIOZ Stream Integration**: Manage videos, audios, and live streams through the AIOZ Stream API.
 - **Media Statistics**: Count total videos and audios in an AIOZ Stream account.
 - **Video Management**: List videos, search by name, and retrieve playback URLs.
 - **Video Upload**: Upload video files to AIOZ Stream directly from a Google Drive link.
