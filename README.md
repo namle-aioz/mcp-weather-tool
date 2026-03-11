@@ -80,7 +80,7 @@ Search for a video by name and retrieve all its playback and asset URLs.
 
 Get a list of all videos in an AIOZ Stream account.
 
-| Parameter   | Type   | Required | Description            |
+| Parameter   | Type   | Required | Description        pen    |
 |-------------|--------|----------|------------------------|
 | `publicKey` | string | Yes      | AIOZ Stream public key |
 | `secretKey` | string | Yes      | AIOZ Stream secret key |
@@ -124,8 +124,6 @@ https://drive.google.com/file/d/{FILE_ID}/view?usp=sharing
 ```
 Video uploaded successfully
 ```
-
-> **Note:** Only Google Drive shareable links are supported. The video must be publicly accessible or shared with appropriate permissions. Ensure the file is a valid video format.
 
 ---
 
@@ -186,7 +184,7 @@ If `SERVER_PORT` is not set, the server defaults to port `8087`.
 ## Running the Server
 
 ```bash
-go run main.go
+go run .
 ```
 
 Or using the compiled binary:
@@ -201,18 +199,19 @@ The server will start on `http://localhost:8087` by default. MCP clients connect
 
 ## Configuration
 
-### Claude Desktop
+### Cursor 
 
-To use this server with Claude Desktop, add the following to your `claude_desktop_config.json`:
+To use this server with Cursor, add the following to your `mcp.json`:
 
 ```json
 {
   "mcpServers": {
-    "aioz-mcp": {
-      "url": "http://localhost:8087/sse"
+    "aioz-mcp-server": {
+      "url": "http://localhost:your_port/sse"
     }
   }
 }
+
 ```
 
 ---
@@ -241,6 +240,8 @@ docker compose -f docker-compose.local.yml up --build
 │   └── location.go                # Geocoding via Open-Meteo geocoding API
 ├── model/
 │   └── client_upload_model.go     # Shared data models
+├── util/
+│   ├── drive.go                   # Drive func util
 ├── go.mod
 ├── Dockerfile
 └── docker-compose.local.yml

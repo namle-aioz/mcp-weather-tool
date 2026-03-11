@@ -44,13 +44,13 @@ func main() {
 	aiozStream := newAIOZTool(
 		"count-total-media",
 		true,
-		"Get total number of videos and audios in AIOZ Stream account",
+		"Get total number of videos and audios in AIOZ Stream account. Use the credentials previously set by aioz-set-credentials.",
 	)
 
 	aiozStreamGetVideoDetail := newAIOZTool(
 		"get-video-url",
 		true,
-		"Get all video URL from the user's AIOZ Stream account by video name",
+		"Get all video URL from the user's AIOZ Stream account by video name. Use the credentials previously set by aioz-set-credentials.",
 		mcp.WithString(
 			"videoName",
 			mcp.Description("Name of video"),
@@ -61,13 +61,13 @@ func main() {
 	aiozStreamGetListVideo := newAIOZTool(
 		"get-list-video",
 		true,
-		"Get all video from the user's AIOZ Stream account",
+		"Get all video from the user's AIOZ Stream account. Use the credentials previously set by aioz-set-credentials.",
 	)
 
 	aiozStreamUploadVideo := newAIOZTool(
 		"upload-video",
 		true,
-		"Upload a video file from the user's local machine to their AIOZ Stream account",
+		"Upload a video file from the user's local machine to their AIOZ Stream account. Use the credentials previously set by aioz-set-credentials.",
 		mcp.WithString(
 			"videoLink",
 			mcp.Description("URL of the video to upload (must be a Google Drive link)"),
@@ -83,7 +83,7 @@ func main() {
 	aiozStreamUCreateKeyLiveStream := newAIOZTool(
 		"create-key-live",
 		true,
-		"Create a key live stream to AIOZ Stream account",
+		"Create a key live stream to AIOZ Stream account. Use the credentials previously set by aioz-set-credentials.",
 		mcp.WithString(
 			"nameKey",
 			mcp.Description("Name of key live stream"),
