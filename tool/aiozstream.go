@@ -2,7 +2,6 @@ package tool
 
 import (
 	"context"
-	"fmt"
 	"mcp-weather-server/model"
 
 	aiozstreamsdk "github.com/AIOZNetwork/aioz-stream-go-client"
@@ -63,7 +62,6 @@ func GetVideoDetailByName(ctx context.Context, publicKey string, secretKey strin
 	}
 
 	for _, m := range *media {
-		fmt.Print(*m.Assets)
 		sourceURLs["EmbededURL"] = *m.Assets.DashPlayerUrl
 		sourceURLs["Mp4URL"] = *m.Assets.Mp4Url
 		sourceURLs["Thumbnail"] = *m.Assets.ThumbnailUrl
@@ -83,11 +81,10 @@ func GetVideos(ctx context.Context, publicKey string, secretKey string) (interfa
 		return nil, err
 	}
 
-	sourceURLs := make(map[string]string)
 	var mediaList []model.MediaInfo
 	media := videoRes.GetData().Media
 	if media == nil {
-		return sourceURLs, nil
+		return mediaList, nil
 	}
 
 	for _, m := range *media {
@@ -131,7 +128,6 @@ func UploadVideo(ctx context.Context, publicKey string, secretKey string, data *
 
 	mediaID := *media.GetData().Id
 
-	fmt.Println(mediaID)
 	errUpload := client.UploadVideo(
 		ctx,
 		mediaID,

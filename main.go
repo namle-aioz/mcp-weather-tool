@@ -25,7 +25,7 @@ func main() {
 	mux.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("pong"))
 	})
-	mux.HandleFunc("/upload", handler.UploadHandler)
+	// mux.HandleFunc("/upload", handler.UploadHandler)
 	mcpServer := server.NewMCPServer(
 		"aioz-mcp",
 		"1.0.0",
@@ -69,8 +69,8 @@ func main() {
 		true,
 		"Upload a video file from the user's local machine to their AIOZ Stream account",
 		mcp.WithString(
-			"filePath",
-			mcp.Description("Path of this file in local machine"),
+			"videoLink",
+			mcp.Description("URL of the video to upload (must be a Google Drive link)"),
 			mcp.Required(),
 		),
 		mcp.WithString(

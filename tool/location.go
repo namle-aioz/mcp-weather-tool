@@ -28,10 +28,15 @@ func Geocode(location string) (float64, float64, error) {
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to read response body: %w", err)
+	}
 
 	var data GeoResponse
-	json.Unmarshal(body, &data)
+	if err := json.Unmarshal(body, &data); err != nil {
+		return 0, 0, fmt.Errorf("failed to parse geocoding response: %w", err)
+	}
 
 	if len(data.Results) == 0 {
 		return 0, 0, fmt.Errorf("location not found")

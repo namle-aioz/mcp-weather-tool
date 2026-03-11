@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"mcp-weather-server/model"
 	"mcp-weather-server/tool"
+	"mcp-weather-server/util"
 	"net/http"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -60,7 +61,7 @@ func HandleAiozStreamGetVideo(
 	}
 	videoName, ok := args["videoName"].(string)
 	if !ok {
-		return mcp.NewToolResultError("SecretKey parameter required"), nil
+		return mcp.NewToolResultError("videoName parameter required"), nil
 	}
 
 	videoDetail, err := tool.GetVideoDetailByName(ctx, publicKey, secretKey, videoName)
@@ -107,16 +108,51 @@ func HandleAiozStreamGetListVideo(
 	return mcp.NewToolResultText(result), nil
 }
 
+// func HandleUploadVideo(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+
+// 	args, ok := req.Params.Arguments.(map[string]any)
+// 	if !ok {
+// 		return mcp.NewToolResultError("invalid arguments"), nil
+// 	}
+// 	videoName, ok := args["title"].(string)
+// 	if !ok {
+// 		return mcp.NewToolResultError("title parameter required"), nil
+// 	}
+// 	publicKey, ok := args["publicKey"].(string)
+// 	if !ok {
+// 		return mcp.NewToolResultError("PublicKey parameter required"), nil
+// 	}
+// 	secretKey, ok := args["secretKey"].(string)
+// 	if !ok {
+// 		return mcp.NewToolResultError("SecretKey parameter required"), nil
+// 	}
+
+// 	uploadURL := "http://localhost:8087/upload"
+
+// 	result := fmt.Sprintf(
+// 		"Upload the video using this endpoint:\nPOST %s\nForm fields: file, title=%s, publicKey=%s, secretKey=%s",
+// 		uploadURL,
+// 		videoName,
+// 		publicKey,
+// 		secretKey,
+// 	)
+
+// 	return mcp.NewToolResultText(result), nil
+// }
+
 func HandleUploadVideo(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 
 	args, ok := req.Params.Arguments.(map[string]any)
 	if !ok {
 		return mcp.NewToolResultError("invalid arguments"), nil
 	}
-	fmt.Println(args)
 	videoName, ok := args["title"].(string)
 	if !ok {
 		return mcp.NewToolResultError("title parameter required"), nil
+	}
+	videoLink, ok := args["videoLink"].(string)
+	if !ok {
+		return mcp.NewToolResultError("videoLink parameter required"), nil
 	}
 	publicKey, ok := args["publicKey"].(string)
 	if !ok {
@@ -127,61 +163,78 @@ func HandleUploadVideo(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 		return mcp.NewToolResultError("SecretKey parameter required"), nil
 	}
 
-	uploadURL := "http://localhost:8087/upload"
+	if util.CheckGoogleDriveLink(videoLink) {
+		downloadURL, err := util.ConvertToDownloadURL(videoLink)
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		videoLink = downloadURL
+	} else {
+		return mcp.NewToolResultError("Invalid video link, only Google Drive links are supported"), nil
+	}
 
-	result := fmt.Sprintf(
-		"Upload the video using this endpoint:\nPOST %s\nForm fields: file, title=%s, publicKey=%s, secretKey=%s",
-		uploadURL,
-		videoName,
-		publicKey,
-		secretKey,
-	)
-
-	return mcp.NewToolResultText(result), nil
-}
-
-func UploadHandler(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	err := r.ParseMultipartForm(32 << 20)
+	resp, err := http.Get(videoLink)
 	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
+		return mcp.NewToolResultError(err.Error()), nil
 	}
-
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-	defer file.Close()
-
-	title := r.FormValue("title")
-	publicKey := r.FormValue("publicKey")
-	secretKey := r.FormValue("secretKey")
-	if title == "" || publicKey == "" || secretKey == "" {
-		http.Error(w, "title, publicKey, secretKey are required", http.StatusBadRequest)
-		return
-	}
-
-	fileName := header.Filename
-	fileSize := header.Size
+	defer resp.Body.Close()
 
 	var clientUploadVideo = &model.UploadVideoClient{
-		FileName: fileName,
-		FileSize: int64(fileSize),
-		File:     file,
+		FileName: videoName,
+		FileSize: resp.ContentLength,
+		File:     resp.Body,
 	}
 
-	err = tool.UploadVideo(ctx, publicKey, secretKey, clientUploadVideo, title)
+	err = tool.UploadVideo(ctx, publicKey, secretKey, clientUploadVideo, videoName)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
+		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	w.Write([]byte("upload success"))
+	return mcp.NewToolResultText("Video uploaded successfully"), nil
 }
+
+// func UploadHandler(w http.ResponseWriter, r *http.Request) {
+
+// 	ctx := r.Context()
+
+// 	err := r.ParseMultipartForm(32 << 20)
+// 	if err != nil {
+// 		http.Error(w, err.Error(), 400)
+// 		return
+// 	}
+
+// 	file, header, err := r.FormFile("file")
+// 	if err != nil {
+// 		http.Error(w, err.Error(), 400)
+// 		return
+// 	}
+// 	defer file.Close()
+
+// 	title := r.FormValue("title")
+// 	publicKey := r.FormValue("publicKey")
+// 	secretKey := r.FormValue("secretKey")
+// 	if title == "" || publicKey == "" || secretKey == "" {
+// 		http.Error(w, "title, publicKey, secretKey are required", http.StatusBadRequest)
+// 		return
+// 	}
+
+// 	fileName := header.Filename
+// 	fileSize := header.Size
+
+// 	var clientUploadVideo = &model.UploadVideoClient{
+// 		FileName: fileName,
+// 		FileSize: int64(fileSize),
+// 		File:     file,
+// 	}
+
+// 	err = tool.UploadVideo(ctx, publicKey, secretKey, clientUploadVideo, title)
+// 	if err != nil {
+// 		http.Error(w, err.Error(), 500)
+// 		return
+// 	}
+
+// 	w.Write([]byte("upload success"))
+// }
 
 func HandleCreateLiveStreamKey(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 
